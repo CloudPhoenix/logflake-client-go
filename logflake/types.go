@@ -4,9 +4,10 @@ import "time"
 
 // LogFlake struct
 type LogFlake struct {
-	Server   string
-	AppKey   string
-	Hostname string
+	Server            string
+	AppKey            string
+	Hostname          string
+	EnableCompression bool
 }
 
 // LogLevel Log Level

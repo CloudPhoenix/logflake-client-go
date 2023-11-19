@@ -2,6 +2,7 @@ package logflake
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -9,15 +10,18 @@ import (
 	"runtime"
 	"runtime/debug"
 	"time"
+
+	"github.com/andybalholm/brotli"
 )
 
 // New Returns new LogFlake instance
 func New(appKey string) *LogFlake {
 	hostname, _ := os.Hostname()
 	return &LogFlake{
-		Server:   "https://app-test.logflake.io",
-		AppKey:   appKey,
-		Hostname: hostname,
+		Server:            "https://app.logflake.io",
+		AppKey:            appKey,
+		Hostname:          hostname,
+		EnableCompression: true,
 	}
 }
 
@@ -71,6 +75,30 @@ func (i *LogFlake) sendData(dataType string, data interface{}) error {
 		return err
 	}
 	url := i.Server + "/api/ingestion/" + i.AppKey + "/" + dataType
+
+	if i.EnableCompression {
+		// Encode to Base64
+		var encoded bytes.Buffer
+		encoder := base64.NewEncoder(base64.StdEncoding, &encoded)
+		if _, err := encoder.Write(j); err != nil {
+			return err
+		}
+		if err := encoder.Close(); err != nil {
+			return err
+		}
+		// Compress with Brotli
+		var compressed bytes.Buffer
+		writer := brotli.NewWriter(&compressed)
+		if _, err := writer.Write(encoded.Bytes()); err != nil {
+			return err
+		}
+		if err := writer.Close(); err != nil {
+			return err
+		}
+		_, err = http.Post(url, "application/octet-stream", bytes.NewBuffer(compressed.Bytes()))
+		return err
+	}
+
 	_, err = http.Post(url, "application/json", bytes.NewBuffer(j))
 	return err
 }

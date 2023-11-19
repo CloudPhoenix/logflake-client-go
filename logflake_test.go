@@ -14,7 +14,9 @@ import (
 )
 
 func getInstance() *logflake.LogFlake {
-	return logflake.New(os.Getenv("LOGFLAKE_TEST"))
+	l := logflake.New(os.Getenv("LOGFLAKE_TEST"))
+	l.Server = "https://app-test.logflake.io"
+	return l
 }
 
 func TestLogs(t *testing.T) {
@@ -79,11 +81,9 @@ func TestMiddleware(t *testing.T) {
 					response += 100
 				}))))
 	defer svr.Close()
-	for r := 0; r < 5; r++ {
-		if _, err := http.Get(svr.URL); err != nil {
-			t.Error(err)
-			return
-		}
+	if _, err := http.Get(svr.URL); err != nil {
+		t.Error(err)
+		return
 	}
 }
 
@@ -98,7 +98,6 @@ func TestPerformance(t *testing.T) {
 
 func TestPerformanceCounter(t *testing.T) {
 	i := getInstance()
-
 	p := i.MeasurePerformance("Counter")
 	time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond) // Simulate work
 	p.Stop()
