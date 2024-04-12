@@ -5,13 +5,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/golang/snappy"
 	"net/http"
 	"os"
 	"runtime"
 	"runtime/debug"
 	"time"
-
-	"github.com/andybalholm/brotli"
 )
 
 // New Returns new LogFlake instance
@@ -43,7 +42,7 @@ func (i *LogFlake) HandleRecover() {
 	if err := recover(); err != nil {
 		pc, _, _, _ := runtime.Caller(2)
 		fn := runtime.FuncForPC(pc)
-		i.SendLog(Log{
+		_ = i.SendLog(Log{
 			Level:   LevelException,
 			Content: fmt.Sprintf("%s: %s\n%s", fn.Name(), err, string(debug.Stack())),
 		})
@@ -62,7 +61,7 @@ func (i *LogFlake) MeasurePerformance(label string) *PerformanceCounter {
 // Stop stops performance counter and sends the result
 func (p *PerformanceCounter) Stop() int64 {
 	duration := time.Since(p.start).Milliseconds()
-	p.instance.SendPerformance(Performance{
+	_ = p.instance.SendPerformance(Performance{
 		Label:    p.Label,
 		Duration: duration,
 	})
@@ -86,16 +85,9 @@ func (i *LogFlake) sendData(dataType string, data interface{}) error {
 		if err := encoder.Close(); err != nil {
 			return err
 		}
-		// Compress with Brotli
-		var compressed bytes.Buffer
-		writer := brotli.NewWriter(&compressed)
-		if _, err := writer.Write(encoded.Bytes()); err != nil {
-			return err
-		}
-		if err := writer.Close(); err != nil {
-			return err
-		}
-		_, err = http.Post(url, "application/octet-stream", bytes.NewBuffer(compressed.Bytes()))
+		// Compress with Snappy
+		compressed := snappy.Encode(nil, encoded.Bytes())
+		_, err = http.Post(url, "application/octet-stream", bytes.NewBuffer(compressed))
 		return err
 	}
 

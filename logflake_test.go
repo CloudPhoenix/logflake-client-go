@@ -22,12 +22,15 @@ func getInstance() *logflake.LogFlake {
 func TestLogs(t *testing.T) {
 	i := getInstance()
 
-	i.SendLog(logflake.Log{
+	err := i.SendLog(logflake.Log{
 		Content:     "Test Log (No Level)",
 		Correlation: "test",
 	})
+	if err != nil {
+		t.Error(err)
+	}
 
-	i.SendLog(logflake.Log{
+	err = i.SendLog(logflake.Log{
 		Content: "Test Log (Info with Params)",
 		Level:   logflake.LevelInfo,
 		Params: map[string]interface{}{
@@ -42,27 +45,38 @@ func TestLogs(t *testing.T) {
 		},
 		Correlation: "test",
 	})
+	if err != nil {
+		t.Error(err)
+	}
 
-	i.SendLog(logflake.Log{
+	err = i.SendLog(logflake.Log{
 		Content: "Test Log (Warn Level)",
 		Level:   logflake.LevelWarn,
 	})
+	if err != nil {
+		t.Error(err)
+	}
 
-	i.SendLog(logflake.Log{
+	err = i.SendLog(logflake.Log{
 		Content: "Test Log (Error Level)",
 		Level:   logflake.LevelError,
 	})
+	if err != nil {
+		t.Error(err)
+	}
 
-	i.SendLog(logflake.Log{
+	err = i.SendLog(logflake.Log{
 		Content: "Test Log (Fatal Level)",
 		Level:   logflake.LevelFatal,
 	})
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestException(t *testing.T) {
 	i := getInstance()
 	defer i.HandleRecover()
-
 	panic("Testing")
 }
 
@@ -90,10 +104,13 @@ func TestMiddleware(t *testing.T) {
 func TestPerformance(t *testing.T) {
 	i := getInstance()
 
-	i.SendPerformance(logflake.Performance{
+	err := i.SendPerformance(logflake.Performance{
 		Label:    "Test",
 		Duration: 100,
 	})
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestPerformanceCounter(t *testing.T) {
