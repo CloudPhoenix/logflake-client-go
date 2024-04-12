@@ -29,7 +29,7 @@ func NewLogger(instance *logflake.LogFlake, tracePerformance bool) func(http.Han
 				}
 				respTime := time.Now()
 				d := respTime.Sub(reqTime)
-				instance.SendLog(logflake.Log{
+				_ = instance.SendLog(logflake.Log{
 					Level:       level,
 					Time:        respTime,
 					Correlation: correlation,
@@ -43,8 +43,8 @@ func NewLogger(instance *logflake.LogFlake, tracePerformance bool) func(http.Han
 						"ResponseBytes":   ww.BytesWritten(),
 					},
 				})
-				if tracePerformance {
-					instance.SendPerformance(logflake.Performance{
+				if tracePerformance && ww.Status() != 404 {
+					_ = instance.SendPerformance(logflake.Performance{
 						Time:     respTime,
 						Label:    "HTTP Response",
 						Duration: d.Milliseconds(),
