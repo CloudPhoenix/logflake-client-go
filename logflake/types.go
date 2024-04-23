@@ -8,6 +8,7 @@ type LogFlake struct {
 	AppKey            string
 	Hostname          string
 	EnableCompression bool
+	userAgent         string
 }
 
 // LogLevel Log Level

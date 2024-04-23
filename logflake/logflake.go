@@ -5,23 +5,31 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/golang/snappy"
 	"net/http"
 	"os"
 	"runtime"
 	"runtime/debug"
 	"time"
+
+	"github.com/golang/snappy"
 )
 
 // New Returns new LogFlake instance
 func New(appKey string) *LogFlake {
 	hostname, _ := os.Hostname()
-	return &LogFlake{
+	i := &LogFlake{
 		Server:            "https://app.logflake.io",
 		AppKey:            appKey,
 		Hostname:          hostname,
 		EnableCompression: true,
 	}
+	i.updateUA()
+	return i
+}
+
+func (i *LogFlake) updateUA() string {
+	i.userAgent = fmt.Sprintf("logflake-client-go/%s-%s/%s", runtime.GOOS, runtime.GOARCH, runtime.Version())
+	return i.userAgent
 }
 
 // SendLog Sends log
@@ -75,6 +83,8 @@ func (i *LogFlake) sendData(dataType string, data interface{}) error {
 	}
 	url := i.Server + "/api/ingestion/" + i.AppKey + "/" + dataType
 
+	var req *http.Request
+
 	if i.EnableCompression {
 		// Encode to Base64
 		var encoded bytes.Buffer
@@ -87,10 +97,25 @@ func (i *LogFlake) sendData(dataType string, data interface{}) error {
 		}
 		// Compress with Snappy
 		compressed := snappy.Encode(nil, encoded.Bytes())
-		_, err = http.Post(url, "application/octet-stream", bytes.NewBuffer(compressed))
-		return err
+		// Prepare compressed request
+		req, err = http.NewRequest("POST", url, bytes.NewBuffer(compressed))
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Content-Type", "application/octet-stream")
+	} else {
+		// Prepare request
+		req, err = http.NewRequest("POST", url, bytes.NewBuffer(j))
+		if err != nil {
+			return err
+		}
+		req.Header.Add("Content-Type", "application/json")
 	}
+	req.Header.Add("Accept", "application/json")
+	if i.userAgent == "" {
+		i.updateUA()
+	}
+	req.Header.Add("User-Agent", i.userAgent)
 
-	_, err = http.Post(url, "application/json", bytes.NewBuffer(j))
 	return err
 }
