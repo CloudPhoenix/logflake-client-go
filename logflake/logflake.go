@@ -117,5 +117,10 @@ func (i *LogFlake) sendData(dataType string, data interface{}) error {
 	}
 	req.Header.Add("User-Agent", i.userAgent)
 
-	return err
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	return nil
 }
