@@ -2,6 +2,7 @@ package logflake
 
 import (
 	"errors"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -11,7 +12,14 @@ import (
 
 	"github.com/CloudPhoenix/logflake-client-go/logflake"
 	"github.com/CloudPhoenix/logflake-client-go/middleware"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
+
+var correlation string
+
+func init() {
+	correlation, _ = gonanoid.New()
+}
 
 func getInstance() *logflake.LogFlake {
 	l := logflake.New(os.Getenv("LOGFLAKE_TEST"))
@@ -24,7 +32,7 @@ func TestLogs(t *testing.T) {
 
 	err := i.SendLog(logflake.Log{
 		Content:     "Test Log (No Level)",
-		Correlation: "test",
+		Correlation: correlation,
 	})
 	if err != nil {
 		t.Error(err)
@@ -43,31 +51,34 @@ func TestLogs(t *testing.T) {
 				"d": true,
 			},
 		},
-		Correlation: "test",
+		Correlation: correlation,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 
 	err = i.SendLog(logflake.Log{
-		Content: "Test Log (Warn Level)",
-		Level:   logflake.LevelWarn,
+		Content:     "Test Log (Warn Level)",
+		Level:       logflake.LevelWarn,
+		Correlation: correlation,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 
 	err = i.SendLog(logflake.Log{
-		Content: "Test Log (Error Level)",
-		Level:   logflake.LevelError,
+		Content:     "Test Log (Error Level)",
+		Level:       logflake.LevelError,
+		Correlation: correlation,
 	})
 	if err != nil {
 		t.Error(err)
 	}
 
 	err = i.SendLog(logflake.Log{
-		Content: "Test Log (Fatal Level)",
-		Level:   logflake.LevelFatal,
+		Content:     "Test Log (Fatal Level)",
+		Level:       logflake.LevelFatal,
+		Correlation: correlation,
 	})
 	if err != nil {
 		t.Error(err)
@@ -76,7 +87,7 @@ func TestLogs(t *testing.T) {
 
 func TestException(t *testing.T) {
 	i := getInstance()
-	defer i.HandleRecover()
+	defer i.HandleRecover(correlation)
 	panic("Testing")
 }
 
@@ -95,9 +106,11 @@ func TestMiddleware(t *testing.T) {
 					response += 100
 				}))))
 	defer svr.Close()
-	if _, err := http.Get(svr.URL); err != nil {
-		t.Error(err)
-		return
+	for range [5]int{} {
+		if _, err := http.Get(svr.URL); err != nil {
+			t.Error(err)
+			return
+		}
 	}
 }
 
@@ -118,4 +131,24 @@ func TestPerformanceCounter(t *testing.T) {
 	p := i.MeasurePerformance("Counter")
 	time.Sleep(time.Duration(rand.Intn(1000)) * time.Millisecond) // Simulate work
 	p.Stop()
+}
+
+func TestSLog(t *testing.T) {
+	startTime := time.Now()
+	i := getInstance()
+	logger := slog.New(logflake.SlogOption{Level: slog.LevelDebug, Instance: i}.NewLogFlakeHandler())
+	slog.SetDefault(logger)
+	slog.Debug("SLog test debug")
+	slog.Info("SLog test info")
+	slog.Warn("SLog test warn")
+	slog.Error("SLog test error")
+	slog.Info(
+		"SLog test info with params",
+		slog.String("correlation", correlation),
+		slog.Duration("testDuration", time.Since(startTime)),
+		slog.Group("testGroup", slog.String("testString", "Test"), slog.Int("testInt", 123)),
+	)
+	slog.Info("slog test with correlation",
+		slog.String("correlation", correlation),
+	)
 }

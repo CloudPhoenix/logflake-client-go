@@ -25,3 +25,15 @@ i.SendLog(logflake.Log{
     Level:   logflake.LevelInfo,
 })
 ```
+## log/slog handler
+Use LogFlake as slog handler
+```go
+i := logflake.New("application-key")
+
+logger := slog.New(logflake.SlogOption{
+    Level: slog.LevelDebug,
+    Instance: i,
+}.NewLogFlakeHandler())
+
+slog.SetDefault(logger)
+```

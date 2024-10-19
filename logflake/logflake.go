@@ -46,13 +46,14 @@ func (i *LogFlake) SendPerformance(performance Performance) error {
 }
 
 // HandleRecover Try to recover and send exception
-func (i *LogFlake) HandleRecover() {
+func (i *LogFlake) HandleRecover(correlation string) {
 	if err := recover(); err != nil {
 		pc, _, _, _ := runtime.Caller(2)
 		fn := runtime.FuncForPC(pc)
 		_ = i.SendLog(Log{
-			Level:   LevelException,
-			Content: fmt.Sprintf("%s: %s\n%s", fn.Name(), err, string(debug.Stack())),
+			Level:       LevelException,
+			Content:     fmt.Sprintf("%s: %s\n%s", fn.Name(), err, string(debug.Stack())),
+			Correlation: correlation,
 		})
 	}
 }

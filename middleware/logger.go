@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/CloudPhoenix/logflake-client-go/logflake"
-	"github.com/google/uuid"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 func NewLogger(instance *logflake.LogFlake, tracePerformance bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
 			reqTime := time.Now()
-			correlation := uuid.New().String()
+			correlation, _ := gonanoid.New()
 			ww := NewWrapResponseWriter(w, r.ProtoMajor)
 
 			defer func() {
