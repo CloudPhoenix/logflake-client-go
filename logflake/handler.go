@@ -57,7 +57,8 @@ func (h *LogFlakeHandler) Enabled(_ context.Context, level slog.Level) bool {
 
 func (h *LogFlakeHandler) Handle(ctx context.Context, record slog.Record) error {
 	newLog := h.option.Converter(h.option.AddSource, h.option.ReplaceAttr, h.attrs, h.groups, &record)
-	return h.client.SendLog(newLog)
+	go h.client.SendLog(newLog)
+	return nil
 }
 
 func (h *LogFlakeHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
